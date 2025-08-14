@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Performance Dashboard - Gas CRN Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #00796B;
+            --secondary-color: #FFC107;
+            --success-color: #28a745;
+            --danger-color: #D32F2F;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-bg: #F4F6F8;
+            --white-bg: #FFFFFF;
+            --dark-text: #333333;
+            --muted-text: #6c757d;
+            --border-color: #e0e0e0;
+            --font-family: 'Poppins', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark-text);
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #00796B 0%, #004d40 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="40" cy="60" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header-subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .date-time {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 1.1em;
+            flex-wrap: wrap;
+        }
+
+        .date-time i {
+            color: var(--secondary-color);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--dark-text);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 1.1em;
+            color: var(--muted-text);
+            font-weight: 500;
+        }
+
+        .stat-trend {
+            font-size: 0.9em;
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .trend-up {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+        }
+
+        .trend-down {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--danger-color);
+        }
+
+        .governorate-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .governorate-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .governorate-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .governorate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-bg);
+        }
+
+        .governorate-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .governorate-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .mini-stat {
+            text-align: center;
+            padding: 15px;
+            background: var(--light-bg);
+            border-radius: 10px;
+        }
+
+        .mini-stat-value {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .mini-stat-label {
+            font-size: 0.9em;
+            color: var(--muted-text);
+            margin-top: 5px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--light-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            transition: width 0.3s ease;
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .filter-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-label {
+            font-size: 0.9em;
+            color: var(--muted-text);
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .filter-select {
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #004d40;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: var(--dark-text);
+        }
+
+        .btn-secondary:hover {
+            background: #e0a800;
+            transform: translateY(-2px);
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--light-bg);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: var(--muted-text);
+        }
+
+        .no-data i {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 15px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .governorate-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .date-time {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-chart-line"></i> لوحة الأداء اليومية</h1>
+                <p class="header-subtitle">مراقبة الأداء اليومي لجميع المحافظات - Gas CRN Tracker</p>
+                <div class="date-time">
+                    <span><i class="fas fa-calendar-alt"></i> <span id="current-date"></span></span>
+                    <span><i class="fas fa-clock"></i> <span id="current-time"></span></span>
+                    <span><i class="fas fa-sync-alt"></i> آخر تحديث: <span id="last-update"></span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading-spinner" id="loading-spinner">
+            <div class="spinner"></div>
+            <p>جاري تحميل البيانات...</p>
+        </div>
+
+        <div id="dashboard-content" style="display: none;">
+            <!-- Overall Statistics -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: var(--success-color);">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                        <div class="stat-trend trend-up" id="completed-trend">
+                            <i class="fas fa-arrow-up"></i> +5.2%
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-completed">0</div>
+                    <div class="stat-label">مهام مكتملة</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: var(--info-color);">
+                            <i class="fas fa-hard-hat"></i>
+                        </div>
+                        <div class="stat-trend trend-up" id="field-trend">
+                            <i class="fas fa-arrow-up"></i> +8.1%
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-field">0</div>
+                    <div class="stat-label">قيد التنفيذ في الموقع</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: var(--warning-color);">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="stat-trend trend-down" id="office-trend">
+                            <i class="fas fa-arrow-down"></i> -2.3%
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-office">0</div>
+                    <div class="stat-label">قيد التنفيذ في المكتب</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: var(--danger-color);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-trend trend-down" id="issues-trend">
+                            <i class="fas fa-arrow-down"></i> -12.5%
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-issues">0</div>
+                    <div class="stat-label">تم الإبلاغ عن مشاكل</div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <h3 style="margin-bottom: 20px;"><i class="fas fa-filter"></i> تصفية البيانات</h3>
+                <div class="filter-controls">
+                    <div class="filter-group">
+                        <label class="filter-label">المحافظة</label>
+                        <select id="governorate-filter" class="filter-select">
+                            <option value="">جميع المحافظات</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">المدينة</label>
+                        <select id="city-filter" class="filter-select" disabled>
+                            <option value="">جميع المدن</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">الفترة الزمنية</label>
+                        <select id="period-filter" class="filter-select">
+                            <option value="today">اليوم</option>
+                            <option value="week">هذا الأسبوع</option>
+                            <option value="month">هذا الشهر</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-primary" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> تطبيق التصفية
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i> إعادة تعيين
+                    </button>
+                </div>
+            </div>
+
+            <!-- Governorate Performance -->
+            <div class="governorate-grid" id="governorate-grid">
+                <!-- Governorate cards will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="refreshDashboard()">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+
+        // Your Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCEJxXDCTYkFOzYbsceVsT6q-q9ksnUG14",
+            authDomain: "buffers-d10aa.firebaseapp.com",
+            databaseURL: "https://buffers-d10aa-default-rtdb.firebaseio.com",
+            projectId: "buffers-d10aa",
+            storageBucket: "buffers-d10aa.firebasestorage.app",
+            messagingSenderId: "333195814832",
+            appId: "1:333195814832:web:ddbf6a958495ff47c4d875",
+            measurementId:  "G-LNR8GXSM35"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+
+        let buildingsData = [];
+
+        // =================================================================
+        // START OF CORRECTED CODE BLOCK
+        // =================================================================
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in. Now, check if they are an admin.
+                get(ref(database, 'users/' + user.uid))
+                    .then((snapshot) => {
+                        // Check if the user's profile exists AND if their role is 'admin'
+                        // Your data structure is likely { role: 'admin', ... }, not just the string "admin"
+                        if (snapshot.exists() && snapshot.val().role === 'admin') {
+                            // Success! User is an admin. Initialize the dashboard.
+                            console.log("Admin access granted.");
+                            initDashboard();
+                        } else {
+                            // Failure: User is not an admin or their profile is missing.
+                            // THIS IS THE FIX: Redirect them AWAY to the login page.
+                            console.error("Access Denied: User is not an admin.");
+                            alert("ليس لديك صلاحية الوصول لهذه الصفحة. سيتم تسجيل خروجك.");
+                            signOut(auth); // Sign out the user
+                            window.location.href = 'login.html';
+                        }
+                    })
+                    .catch((error) => {
+                        // Handle potential errors fetching the user profile
+                        console.error("Error fetching user profile:", error);
+                        alert("حدث خطأ أثناء التحقق من الصلاحيات.");
+                        window.location.href = 'login.html';
+                    });
+            } else {
+                // User is not signed in at all. Redirect to the login page.
+                console.log("No user signed in. Redirecting to login.");
+                window.location.href = 'login.html';
+            }
+        });
+        
+        // =================================================================
+        // END OF CORRECTED CODE BLOCK
+        // =================================================================
+
+        function initDashboard() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            showLoading();
+            loadDashboardData();
+            
+            // Auto-refresh every 5 minutes
+            setInterval(loadDashboardData, 300000);
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                weekday: 'long'
+            };
+            
+            document.getElementById('current-date').textContent = now.toLocaleDateString('ar-EG', options);
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('ar-EG');
+        }
+
+        function showLoading() {
+            document.getElementById('loading-spinner').style.display = 'block';
+            document.getElementById('dashboard-content').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-spinner').style.display = 'none';
+            document.getElementById('dashboard-content').style.display = 'block';
+        }
+
+        function loadDashboardData() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString('ar-EG');
+
+            onValue(ref(database, '/buildings'), (snapshot) => {
+                const data = snapshot.val();
+                buildingsData = data ? Object.keys(data).map(key => ({ ...data[key], db_key: key })) : [];
+                
+                // Once data is loaded, apply filters (which will then update the UI)
+                populateFilters();
+                applyFilters(); // Initially display all data
+                hideLoading();
+            }, {
+                onlyOnce: true // Fetch data once on load/refresh to avoid constant UI flicker
+            });
+        }
+        
+        function updateOverallStats(data) {
+            const stats = calculateStats(data);
+            
+            document.getElementById('total-completed').textContent = stats.completed;
+            document.getElementById('total-field').textContent = stats.field;
+            document.getElementById('total-office').textContent = stats.office;
+            document.getElementById('total-issues').textContent = stats.issues;
+        }
+
+        function calculateStats(data) {
+            return {
+                completed: data.filter(b => b.map_confirmed).length,
+                field: data.filter(b => b.needs_field_visit && !b.site_confirmed && !b.site_issue_reported).length,
+                office: data.filter(b => !b.map_confirmed && (!b.needs_field_visit || b.site_confirmed)).length,
+                issues: data.filter(b => b.site_issue_reported).length,
+                total: data.length
+            };
+        }
+
+        function updateGovernorateCards(data) {
+            const governorates = [...new Set(data.map(b => b.governorate))].filter(Boolean);
+            const gridContainer = document.getElementById('governorate-grid');
+            
+            if (governorates.length === 0) {
+                gridContainer.innerHTML = `
+                    <div class="no-data" style="grid-column: 1 / -1;">
+                        <i class="fas fa-search"></i>
+                        <h3>لا توجد بيانات</h3>
+                        <p>لا توجد بيانات تطابق المرشحات المحددة.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            gridContainer.innerHTML = governorates.map(gov => {
+                const govData = data.filter(b => b.governorate === gov);
+                const stats = calculateStats(govData);
+                const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+                
+                return `
+                    <div class="governorate-card">
+                        <div class="governorate-header">
+                            <div class="governorate-name">${gov}</div>
+                            <div style="font-size: 0.9em; color: var(--muted-text);">
+                                ${stats.total} مبنى
+                            </div>
+                        </div>
+                        <div class="governorate-stats">
+                            <div class="mini-stat">
+                                <div class="mini-stat-value" style="color: var(--success-color);">${stats.completed}</div>
+                                <div class="mini-stat-label">مكتمل</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="mini-stat-value" style="color: var(--info-color);">${stats.field}</div>
+                                <div class="mini-stat-label">موقع</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="mini-stat-value" style="color: var(--warning-color);">${stats.office}</div>
+                                <div class="mini-stat-label">مكتب</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="mini-stat-value" style="color: var(--danger-color);">${stats.issues}</div>
+                                <div class="mini-stat-label">مشاكل</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${completionRate}%"></div>
+                        </div>
+                        <div style="text-align: center; margin-top: 10px; font-size: 0.9em; color: var(--muted-text);">
+                            معدل الإنجاز: ${completionRate}%
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function populateFilters() {
+            const governorates = [...new Set(buildingsData.map(b => b.governorate))].filter(Boolean);
+            const govSelect = document.getElementById('governorate-filter');
+            const currentVal = govSelect.value;
+            
+            govSelect.innerHTML = '<option value="">جميع المحافظات</option>';
+            governorates.forEach(gov => {
+                govSelect.innerHTML += `<option value="${gov}">${gov}</option>`;
+            });
+            govSelect.value = currentVal; // Restore previous selection if it exists
+        }
+
+        window.applyFilters = function() {
+            const govFilter = document.getElementById('governorate-filter').value;
+            const cityFilter = document.getElementById('city-filter').value;
+            // Period filter logic would go here if you have timestamps in your data
+            
+            let filteredData = buildingsData;
+            
+            if (govFilter) {
+                filteredData = filteredData.filter(b => b.governorate === govFilter);
+            }
+            
+            if (cityFilter) {
+                filteredData = filteredData.filter(b => b.city === cityFilter);
+            }
+            
+            // Update UI with filtered data
+            updateOverallStats(filteredData);
+            updateGovernorateCards(filteredData);
+        }
+
+        window.resetFilters = function() {
+            document.getElementById('governorate-filter').value = '';
+            document.getElementById('city-filter').innerHTML = '<option value="">جميع المدن</option>';
+            document.getElementById('city-filter').value = '';
+            document.getElementById('city-filter').disabled = true;
+            document.getElementById('period-filter').value = 'today';
+            
+            // Re-apply filters which will now show all data
+            applyFilters();
+        }
+
+        window.refreshDashboard = function() {
+            showLoading();
+            loadDashboardData();
+            
+            const refreshBtnIcon = document.querySelector('.refresh-btn i');
+            refreshBtnIcon.classList.add('fa-spin');
+            setTimeout(() => {
+                refreshBtnIcon.classList.remove('fa-spin');
+            }, 1000);
+        }
+
+        document.getElementById('governorate-filter').addEventListener('change', function() {
+            const selectedGov = this.value;
+            const citySelect = document.getElementById('city-filter');
+            citySelect.innerHTML = '<option value="">جميع المدن</option>'; // Reset cities
+            
+            if (selectedGov) {
+                const cities = [...new Set(buildingsData
+                    .filter(b => b.governorate === selectedGov)
+                    .map(b => b.city))].filter(Boolean);
+                
+                cities.forEach(city => {
+                    citySelect.innerHTML += `<option value="${city}">${city}</option>`;
+                });
+                citySelect.disabled = false;
+            } else {
+                citySelect.disabled = true;
+            }
+        });
+
+    </script>
+</body>
+</html>
