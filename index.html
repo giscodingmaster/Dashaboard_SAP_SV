@@ -15,6 +15,10 @@
             --danger-color: #D32F2F;
             --warning-color: #ffc107;
             --info-color: #17a2b8;
+            /* START: ADDED COLORS */
+            --delivered-color: #673AB7; /* A nice purple for delivered */
+            --remaining-color: #607D8B; /* A slate grey for remaining */
+            /* END: ADDED COLORS */
             --light-bg: #F4F6F8;
             --white-bg: #FFFFFF;
             --dark-text: #333333;
@@ -175,6 +179,31 @@
             background: rgba(220, 53, 69, 0.1);
             color: var(--danger-color);
         }
+
+        /* START: ADDED STYLE FOR EDIT BUTTON */
+        .edit-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px; /* For RTL layout */
+            background: rgba(0,0,0,0.05);
+            border: none;
+            color: var(--muted-text);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .edit-btn:hover {
+            background: rgba(0,0,0,0.1);
+            color: var(--dark-text);
+        }
+        /* END: ADDED STYLE FOR EDIT BUTTON */
 
         .governorate-grid {
             display: grid;
@@ -475,6 +504,31 @@
                     <div class="stat-value" id="total-issues">0</div>
                     <div class="stat-label">تم الإبلاغ عن مشاكل</div>
                 </div>
+
+                <!-- START: ADDED CARDS -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: var(--delivered-color);">
+                            <i class="fas fa-truck-ramp-box"></i>
+                        </div>
+                        <button class="edit-btn" onclick="editDeliveredCount()" title="تعديل العدد المسلّم">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+                    </div>
+                    <div class="stat-value" id="total-delivered">0</div>
+                    <div class="stat-label">تم تسليمه للقابضة</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: var(--remaining-color);">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-remaining">0</div>
+                    <div class="stat-label">متبقي (لم يسلم)</div>
+                </div>
+                <!-- END: ADDED CARDS -->
             </div>
 
             <!-- Filter Section -->
@@ -526,7 +580,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getDatabase, ref, onValue, get } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+        // START: ADD 'set' TO THE IMPORT
+        import { getDatabase, ref, onValue, get, set } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+        // END: ADD 'set' TO THE IMPORT
 
         // Your Firebase configuration
         const firebaseConfig = {
@@ -545,48 +601,33 @@
         const database = getDatabase(app);
 
         let buildingsData = [];
-
-        // =================================================================
-        // START OF CORRECTED CODE BLOCK
-        // =================================================================
+        let deliveredCount = 0; // <-- ADD THIS VARIABLE
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in. Now, check if they are an admin.
                 get(ref(database, 'users/' + user.uid))
                     .then((snapshot) => {
-                        // Check if the user's profile exists AND if their role is 'admin'
-                        // Your data structure is likely { role: 'admin', ... }, not just the string "admin"
                         if (snapshot.exists() && snapshot.val().role === 'admin') {
-                            // Success! User is an admin. Initialize the dashboard.
                             console.log("Admin access granted.");
                             initDashboard();
                         } else {
-                            // Failure: User is not an admin or their profile is missing.
-                            // THIS IS THE FIX: Redirect them AWAY to the login page.
                             console.error("Access Denied: User is not an admin.");
                             alert("ليس لديك صلاحية الوصول لهذه الصفحة. سيتم تسجيل خروجك.");
-                            signOut(auth); // Sign out the user
+                            signOut(auth);
                             window.location.href = 'login.html';
                         }
                     })
                     .catch((error) => {
-                        // Handle potential errors fetching the user profile
                         console.error("Error fetching user profile:", error);
                         alert("حدث خطأ أثناء التحقق من الصلاحيات.");
                         window.location.href = 'login.html';
                     });
             } else {
-                // User is not signed in at all. Redirect to the login page.
                 console.log("No user signed in. Redirecting to login.");
                 window.location.href = 'login.html';
             }
         });
         
-        // =================================================================
-        // END OF CORRECTED CODE BLOCK
-        // =================================================================
-
         function initDashboard() {
             updateDateTime();
             setInterval(updateDateTime, 1000);
@@ -594,7 +635,6 @@
             showLoading();
             loadDashboardData();
             
-            // Auto-refresh every 5 minutes
             setInterval(loadDashboardData, 300000);
         }
 
@@ -625,16 +665,25 @@
             const now = new Date();
             document.getElementById('last-update').textContent = now.toLocaleTimeString('ar-EG');
 
-            onValue(ref(database, '/buildings'), (snapshot) => {
-                const data = snapshot.val();
-                buildingsData = data ? Object.keys(data).map(key => ({ ...data[key], db_key: key })) : [];
-                
-                // Once data is loaded, apply filters (which will then update the UI)
-                populateFilters();
-                applyFilters(); // Initially display all data
-                hideLoading();
-            }, {
-                onlyOnce: true // Fetch data once on load/refresh to avoid constant UI flicker
+            // First, get the delivered count
+            get(ref(database, 'dashboard_stats/deliveredCount')).then((snapshot) => {
+                if (snapshot.exists()) {
+                    deliveredCount = snapshot.val();
+                } else {
+                    deliveredCount = 0; // Default if not set in DB
+                }
+
+                // Then, get the buildings data
+                onValue(ref(database, '/buildings'), (snapshot) => {
+                    const data = snapshot.val();
+                    buildingsData = data ? Object.keys(data).map(key => ({ ...data[key], db_key: key })) : [];
+                    
+                    populateFilters();
+                    applyFilters(); // This will now update all stats including delivered/remaining
+                    hideLoading();
+                }, {
+                    onlyOnce: true 
+                });
             });
         }
         
@@ -645,6 +694,12 @@
             document.getElementById('total-field').textContent = stats.field;
             document.getElementById('total-office').textContent = stats.office;
             document.getElementById('total-issues').textContent = stats.issues;
+
+            // START: UPDATE NEW CARDS
+            document.getElementById('total-delivered').textContent = deliveredCount;
+            const remaining = stats.completed - deliveredCount;
+            document.getElementById('total-remaining').textContent = remaining > 0 ? remaining : 0;
+            // END: UPDATE NEW CARDS
         }
 
         function calculateStats(data) {
@@ -723,13 +778,12 @@
             governorates.forEach(gov => {
                 govSelect.innerHTML += `<option value="${gov}">${gov}</option>`;
             });
-            govSelect.value = currentVal; // Restore previous selection if it exists
+            govSelect.value = currentVal;
         }
 
         window.applyFilters = function() {
             const govFilter = document.getElementById('governorate-filter').value;
             const cityFilter = document.getElementById('city-filter').value;
-            // Period filter logic would go here if you have timestamps in your data
             
             let filteredData = buildingsData;
             
@@ -741,7 +795,6 @@
                 filteredData = filteredData.filter(b => b.city === cityFilter);
             }
             
-            // Update UI with filtered data
             updateOverallStats(filteredData);
             updateGovernorateCards(filteredData);
         }
@@ -753,7 +806,6 @@
             document.getElementById('city-filter').disabled = true;
             document.getElementById('period-filter').value = 'today';
             
-            // Re-apply filters which will now show all data
             applyFilters();
         }
 
@@ -768,10 +820,39 @@
             }, 1000);
         }
 
+        // START: ADD THIS NEW FUNCTION
+        window.editDeliveredCount = function() {
+            const newCountStr = prompt("أدخل العدد الجديد الذي تم تسليمه:", deliveredCount);
+
+            if (newCountStr === null) {
+                return; // User cancelled
+            }
+
+            const newCount = parseInt(newCountStr, 10);
+
+            if (isNaN(newCount) || newCount < 0) {
+                alert("الرجاء إدخال رقم صحيح أكبر من أو يساوي صفر.");
+                return;
+            }
+
+            // Save the new count to Firebase
+            set(ref(database, 'dashboard_stats/deliveredCount'), newCount)
+                .then(() => {
+                    console.log("Delivered count updated successfully!");
+                    deliveredCount = newCount; // Update the local variable
+                    applyFilters(); // Re-calculate and update the UI
+                })
+                .catch((error) => {
+                    console.error("Error updating delivered count: ", error);
+                    alert("حدث خطأ أثناء تحديث العدد.");
+                });
+        }
+        // END: ADD THIS NEW FUNCTION
+
         document.getElementById('governorate-filter').addEventListener('change', function() {
             const selectedGov = this.value;
             const citySelect = document.getElementById('city-filter');
-            citySelect.innerHTML = '<option value="">جميع المدن</option>'; // Reset cities
+            citySelect.innerHTML = '<option value="">جميع المدن</option>';
             
             if (selectedGov) {
                 const cities = [...new Set(buildingsData
