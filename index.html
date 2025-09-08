@@ -377,6 +377,52 @@
             box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         }
 
+        /* === START: NEW CSS FOR DELIVERY CARDS === */
+        .delivery-input-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .delivery-input {
+            width: 100%;
+            font-size: 2.2em;
+            font-weight: 700;
+            color: var(--dark-text);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 5px 10px;
+            text-align: center;
+            -moz-appearance: textfield; /* Firefox */
+        }
+        
+        .delivery-input::-webkit-outer-spin-button,
+        .delivery-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .delivery-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn-sm {
+            padding: 10px 15px;
+            font-size: 0.9em;
+        }
+
+        .save-success {
+            color: var(--success-color);
+            font-size: 0.9em;
+            margin-top: 8px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        /* === END: NEW CSS FOR DELIVERY CARDS === */
+
         @media (max-width: 768px) {
             .dashboard-container {
                 padding: 15px;
@@ -475,6 +521,33 @@
                     <div class="stat-value" id="total-issues">0</div>
                     <div class="stat-label">تم الإبلاغ عن مشاكل</div>
                 </div>
+
+                <!-- === START: NEW CARDS FOR DELIVERY STATS === -->
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: #4A148C;">
+                            <i class="fas fa-truck-ramp-box"></i>
+                        </div>
+                    </div>
+                    <div class="stat-label">تم تسليمه (أدخل القيمة)</div>
+                    <div class="delivery-input-container">
+                        <input type="number" id="delivered-input" class="delivery-input" placeholder="0" min="0">
+                        <button id="update-delivered-btn" class="btn btn-primary btn-sm">حفظ</button>
+                    </div>
+                    <div id="save-success-msg" class="save-success">تم الحفظ!</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon" style="background: #FF6F00;">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value" id="total-remaining">0</div>
+                    <div class="stat-label">متبقي للتسليم</div>
+                </div>
+                <!-- === END: NEW CARDS FOR DELIVERY STATS === -->
+
             </div>
 
             <!-- Filter Section -->
@@ -546,247 +619,33 @@
 
         let buildingsData = [];
 
-        // =================================================================
-        // START OF CORRECTED CODE BLOCK
-        // =================================================================
-
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in. Now, check if they are an admin.
                 get(ref(database, 'users/' + user.uid))
                     .then((snapshot) => {
-                        // Check if the user's profile exists AND if their role is 'admin'
-                        // Your data structure is likely { role: 'admin', ... }, not just the string "admin"
                         if (snapshot.exists() && snapshot.val().role === 'admin') {
-                            // Success! User is an admin. Initialize the dashboard.
                             console.log("Admin access granted.");
                             initDashboard();
                         } else {
-                            // Failure: User is not an admin or their profile is missing.
-                            // THIS IS THE FIX: Redirect them AWAY to the login page.
                             console.error("Access Denied: User is not an admin.");
                             alert("ليس لديك صلاحية الوصول لهذه الصفحة. سيتم تسجيل خروجك.");
-                            signOut(auth); // Sign out the user
+                            signOut(auth);
                             window.location.href = 'login.html';
                         }
                     })
                     .catch((error) => {
-                        // Handle potential errors fetching the user profile
                         console.error("Error fetching user profile:", error);
                         alert("حدث خطأ أثناء التحقق من الصلاحيات.");
                         window.location.href = 'login.html';
                     });
             } else {
-                // User is not signed in at all. Redirect to the login page.
                 console.log("No user signed in. Redirecting to login.");
                 window.location.href = 'login.html';
             }
         });
         
-        // =================================================================
-        // END OF CORRECTED CODE BLOCK
-        // =================================================================
-
         function initDashboard() {
             updateDateTime();
             setInterval(updateDateTime, 1000);
             
-            showLoading();
-            loadDashboardData();
-            
-            // Auto-refresh every 5 minutes
-            setInterval(loadDashboardData, 300000);
-        }
-
-        function updateDateTime() {
-            const now = new Date();
-            const options = { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                weekday: 'long'
-            };
-            
-            document.getElementById('current-date').textContent = now.toLocaleDateString('ar-EG', options);
-            document.getElementById('current-time').textContent = now.toLocaleTimeString('ar-EG');
-        }
-
-        function showLoading() {
-            document.getElementById('loading-spinner').style.display = 'block';
-            document.getElementById('dashboard-content').style.display = 'none';
-        }
-
-        function hideLoading() {
-            document.getElementById('loading-spinner').style.display = 'none';
-            document.getElementById('dashboard-content').style.display = 'block';
-        }
-
-        function loadDashboardData() {
-            const now = new Date();
-            document.getElementById('last-update').textContent = now.toLocaleTimeString('ar-EG');
-
-            onValue(ref(database, '/buildings'), (snapshot) => {
-                const data = snapshot.val();
-                buildingsData = data ? Object.keys(data).map(key => ({ ...data[key], db_key: key })) : [];
-                
-                // Once data is loaded, apply filters (which will then update the UI)
-                populateFilters();
-                applyFilters(); // Initially display all data
-                hideLoading();
-            }, {
-                onlyOnce: true // Fetch data once on load/refresh to avoid constant UI flicker
-            });
-        }
-        
-        function updateOverallStats(data) {
-            const stats = calculateStats(data);
-            
-            document.getElementById('total-completed').textContent = stats.completed;
-            document.getElementById('total-field').textContent = stats.field;
-            document.getElementById('total-office').textContent = stats.office;
-            document.getElementById('total-issues').textContent = stats.issues;
-        }
-
-        function calculateStats(data) {
-            return {
-                completed: data.filter(b => b.map_confirmed).length,
-                field: data.filter(b => b.needs_field_visit && !b.site_confirmed && !b.site_issue_reported).length,
-                office: data.filter(b => !b.map_confirmed && (!b.needs_field_visit || b.site_confirmed)).length,
-                issues: data.filter(b => b.site_issue_reported).length,
-                total: data.length
-            };
-        }
-
-        function updateGovernorateCards(data) {
-            const governorates = [...new Set(data.map(b => b.governorate))].filter(Boolean);
-            const gridContainer = document.getElementById('governorate-grid');
-            
-            if (governorates.length === 0) {
-                gridContainer.innerHTML = `
-                    <div class="no-data" style="grid-column: 1 / -1;">
-                        <i class="fas fa-search"></i>
-                        <h3>لا توجد بيانات</h3>
-                        <p>لا توجد بيانات تطابق المرشحات المحددة.</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            gridContainer.innerHTML = governorates.map(gov => {
-                const govData = data.filter(b => b.governorate === gov);
-                const stats = calculateStats(govData);
-                const completionRate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
-                
-                return `
-                    <div class="governorate-card">
-                        <div class="governorate-header">
-                            <div class="governorate-name">${gov}</div>
-                            <div style="font-size: 0.9em; color: var(--muted-text);">
-                                ${stats.total} مبنى
-                            </div>
-                        </div>
-                        <div class="governorate-stats">
-                            <div class="mini-stat">
-                                <div class="mini-stat-value" style="color: var(--success-color);">${stats.completed}</div>
-                                <div class="mini-stat-label">مكتمل</div>
-                            </div>
-                            <div class="mini-stat">
-                                <div class="mini-stat-value" style="color: var(--info-color);">${stats.field}</div>
-                                <div class="mini-stat-label">موقع</div>
-                            </div>
-                            <div class="mini-stat">
-                                <div class="mini-stat-value" style="color: var(--warning-color);">${stats.office}</div>
-                                <div class="mini-stat-label">مكتب</div>
-                            </div>
-                            <div class="mini-stat">
-                                <div class="mini-stat-value" style="color: var(--danger-color);">${stats.issues}</div>
-                                <div class="mini-stat-label">مشاكل</div>
-                            </div>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${completionRate}%"></div>
-                        </div>
-                        <div style="text-align: center; margin-top: 10px; font-size: 0.9em; color: var(--muted-text);">
-                            معدل الإنجاز: ${completionRate}%
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-        
-        function populateFilters() {
-            const governorates = [...new Set(buildingsData.map(b => b.governorate))].filter(Boolean);
-            const govSelect = document.getElementById('governorate-filter');
-            const currentVal = govSelect.value;
-            
-            govSelect.innerHTML = '<option value="">جميع المحافظات</option>';
-            governorates.forEach(gov => {
-                govSelect.innerHTML += `<option value="${gov}">${gov}</option>`;
-            });
-            govSelect.value = currentVal; // Restore previous selection if it exists
-        }
-
-        window.applyFilters = function() {
-            const govFilter = document.getElementById('governorate-filter').value;
-            const cityFilter = document.getElementById('city-filter').value;
-            // Period filter logic would go here if you have timestamps in your data
-            
-            let filteredData = buildingsData;
-            
-            if (govFilter) {
-                filteredData = filteredData.filter(b => b.governorate === govFilter);
-            }
-            
-            if (cityFilter) {
-                filteredData = filteredData.filter(b => b.city === cityFilter);
-            }
-            
-            // Update UI with filtered data
-            updateOverallStats(filteredData);
-            updateGovernorateCards(filteredData);
-        }
-
-        window.resetFilters = function() {
-            document.getElementById('governorate-filter').value = '';
-            document.getElementById('city-filter').innerHTML = '<option value="">جميع المدن</option>';
-            document.getElementById('city-filter').value = '';
-            document.getElementById('city-filter').disabled = true;
-            document.getElementById('period-filter').value = 'today';
-            
-            // Re-apply filters which will now show all data
-            applyFilters();
-        }
-
-        window.refreshDashboard = function() {
-            showLoading();
-            loadDashboardData();
-            
-            const refreshBtnIcon = document.querySelector('.refresh-btn i');
-            refreshBtnIcon.classList.add('fa-spin');
-            setTimeout(() => {
-                refreshBtnIcon.classList.remove('fa-spin');
-            }, 1000);
-        }
-
-        document.getElementById('governorate-filter').addEventListener('change', function() {
-            const selectedGov = this.value;
-            const citySelect = document.getElementById('city-filter');
-            citySelect.innerHTML = '<option value="">جميع المدن</option>'; // Reset cities
-            
-            if (selectedGov) {
-                const cities = [...new Set(buildingsData
-                    .filter(b => b.governorate === selectedGov)
-                    .map(b => b.city))].filter(Boolean);
-                
-                cities.forEach(city => {
-                    citySelect.innerHTML += `<option value="${city}">${city}</option>`;
-                });
-                citySelect.disabled = false;
-            } else {
-                citySelect.disabled = true;
-            }
-        });
-
-    </script>
-</body>
-</html>
+            showLoadi
